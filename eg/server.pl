@@ -4,7 +4,7 @@ use blib;
 use Socket;
 use Devel::Accept4;
 
-Devel::Accept4::replace_accept();
+BEGIN { Devel::Accept4::replace_accept(); }
 
 #ソケット作成
 socket(SERVER, PF_INET, SOCK_STREAM, getprotobyname('tcp')) or die;

@@ -15,7 +15,11 @@ extern "C" {
 #define NEED_newSVpvn_flags
 #include "ppport.h"
 
-#define HAVE_ACCEPT4
+#define _GNU_SOURCE
+#include <sys/socket.h>
+#include <sys/types.h>
+
+#define HAVE_ACCEPT4 1
 
 static OP* my_accept(pTHX) {
     dVAR; dSP; dTARGET;
@@ -41,6 +45,7 @@ static OP* my_accept(pTHX) {
 	goto nuts;
 
     nstio = GvIOn(ngv);
+
 #if defined(HAVE_ACCEPT4) && defined(SOCK_CLOEXEC)
     /* accept4() is available on Linux 2.6.28+ and glibc 2.10 */
     static int accept4_works = -1;
@@ -86,9 +91,14 @@ static OP* my_accept(pTHX) {
 	if (!IoIFP(nstio) && !IoOFP(nstio)) PerlLIO_close(fd);
 	goto badexit;
     }
-#if 0
-    /* accept4(2) sets O_CLOEXEC. */
+
 #if defined(HAS_FCNTL) && defined(F_SETFD)
+#if defined(HAVE_ACCEPT4) && defined(SOCK_CLOEXEC)
+    if (accept4_works == 0) {
+        /* accept4(2) sets O_CLOEXEC. */
+        fcntl(fd, F_SETFD, fd > PL_maxsysfd);	/* ensure close-on-exec */
+    }
+#else
     fcntl(fd, F_SETFD, fd > PL_maxsysfd);	/* ensure close-on-exec */
 #endif
 #endif
